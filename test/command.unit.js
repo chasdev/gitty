@@ -1,3 +1,5 @@
+'use strict';
+
 var HOME    = process.env.HOME;
 var should  = require('should');
 var Command = require('../lib/command');
