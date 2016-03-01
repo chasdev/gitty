@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Gitty Source: lib/parser.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.flatly.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html">Gitty</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="modules.list.html" class="dropdown-toggle" data-toggle="dropdown">Modules<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="module-gitty.html">gitty</a></li><li><a href="module-gitty_parser.html">gitty/parser</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="Command.html">Command</a></li><li><a href="Repository.html">Repository</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+		<div class="col-sm-3 col-md-3">
+            <form class="navbar-form" role="search">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-12">
+	
+		<div id="main">
+			
+
+		<h1 class="page-title">Source: lib/parser.js</h1>
+    
+<section>
+    <article>
+        <pre
+            class="sunlight-highlight-javascript linenums">/**
+* @module gitty/parser
+*/
+
+'use strict';
+
+/**
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.log = function(output) {
+  var log = '[' + output.substring(0, output.length - 1) + ']';
+
+  // this function cleans the commit log from any double quotes breaking the
+  // JSON string
+
+  var jsonValueRegex = /".*?":"(.*?)"[,}]/g;
+
+  var h = log.match(jsonValueRegex);
+
+  if (h) {
+    for (var i = h.length - 1; i >= 0; i--) {
+      var hh = h[i].replace(jsonValueRegex, '$1');
+      var hhh = hh.replace(/\"/g, '\\"').replace(/\'/g, '');
+
+      log = log.replace(hh, hhh);
+    }
+  }
+
+  return JSON.parse(log);
+};
+
+/**
+* Output Handler for GIT status
+* @function
+* @param {string} gitstatus
+* @param {string} untracked
+* @return {string}
+*/
+module.exports.status = function(gitstatus, untracked) {
+  untracked = untracked.split('\n');
+
+  var fileStatus = null;
+  var output = gitstatus.split('\n');
+
+  var status = {
+    staged: [],
+    unstaged: [],
+    untracked: untracked.slice(0, untracked.length - 1)
+  };
+
+  // iterate over lines
+  output.forEach(function(line) {
+    line = line.toLowerCase();
+
+    // switch to staged array
+    if (line.indexOf('changes to be committed') > -1) {
+      fileStatus = 'staged';
+    }
+    // or switch to not_staged array
+    else if (line.indexOf('changes not staged for commit') > -1) {
+      fileStatus = 'unstaged';
+    }
+    // or switch to untracked array
+    else if (line.indexOf('untracked files') > -1) {
+      fileStatus = 'untracked';
+    }
+
+    var isModified = line.indexOf('modified') > -1;
+    var isNewFile = line.indexOf('new file') > -1;
+    var isDeleted = line.indexOf('deleted') > -1;
+
+    // check if the line contains a keyword
+    if (isModified || isNewFile || isDeleted) {
+      // then remove # and all whitespace and split at the colon
+      var fileinfo = line.substr(1).trim().split(':');
+      // push a new object into the current array
+      status[fileStatus].push({
+        file: fileinfo[1].trim(),
+        status: fileinfo[0]
+      });
+    }
+  });
+
+  return status;
+};
+
+/**
+* Output handler for git commit
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.commit = function(output) {
+  var commitFailed = (output.indexOf('nothing to commit') > -1 ||
+                      output.indexOf('no changes added to commit') > -1);
+
+  // if there is nothing to commit...
+  if (commitFailed) {
+    return {
+      error: (function(output) {
+        var lines = output.split('\n');
+        for (var ln = 0; ln &lt; lines.length; ln++) {
+          if (lines[ln].indexOf('#') === -1) {
+            return lines[ln];
+          }
+        }
+      })(output)
+    };
+  }
+
+  var splitOutput = output.split('\n');
+  var branchAndHash = splitOutput[0].match(/\[([^\]]+)]/g)[0];
+  var branch = branchAndHash.substring(1, branchAndHash.length - 1);
+  var hash = branchAndHash.substring(1, branchAndHash.length - 1);
+  var filesChanged = splitOutput[1].split(' ')[0];
+  var operations = splitOutput.splice(2);
+
+  return {
+    branch: branch.split(' ')[0],
+    commit: hash.split(' ')[1],
+    changed: filesChanged,
+    operations: operations
+  };
+};
+
+/**
+* Output handler for git branch command
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.branch = function(output) {
+  var tree = { current: null, others: [] };
+  var branches = output.split('\n');
+
+  branches.forEach(function(val, key) {
+    if (val.indexOf('*') > -1) {
+      tree.current = val.replace('*', '').trim();
+    }
+    else if (val) {
+      tree.others.push(val.trim());
+    }
+  });
+
+  return tree;
+};
+
+/**
+* Output handler for git tag command
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.tag = function(output) {
+  var tags = output.split(/\r?\n/);
+
+  for (var i = 0; i &lt; tags.length; i++) {
+    if (!tags[i].length) {
+      tags.splice(i, 1);
+    }
+  }
+
+  return tags;
+};
+
+/**
+* Output handler for git remote -v command
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.remotes = function(output) {
+  var list = {};
+  var parseme = output.split('\n');
+
+  parseme.forEach(function(val, key) {
+    if (val.split('\t')[0]) {
+      list[val.split('\t')[0]] = val.split('\t')[1].split(' ')[0];
+    }
+  });
+
+  return list;
+};
+
+/**
+* Output handler for git errors from git push and pull commands
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.syncErr = function(output) {
+  var result = output.split('\r\n');
+
+  for (var i = 0; i &lt; result.length; i++) {
+    if (!result[i].length) {
+      result.splice(i, 1);
+    }
+  }
+
+  return result;
+};
+
+/**
+* Output handler for git success messages from git push and pull commands
+* @function
+* @param {string} output
+* @return {string}
+*/
+module.exports.syncSuccess = function(output) {
+  return output;
+};
+</pre>
+    </article>
+</section>
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+
+</div>
+</div>
+
+<div class="modal fade" id="searchResults">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Search results</h4>
+      </div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div>
+
+<footer>
+
+
+	<span class="copyright">
+	Copyright 2016 Gordon Hall
+	</span>
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a>
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+<script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : true,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			var id = $( heading ).attr( "id" );
+			return id && id.replace(/\~/g, '-inner-').replace(/\./g, '-static-') || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		SearcherDisplay.init();
+	});
+</script>
+
+</body>
+</html>
