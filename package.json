@@ -1,6 +1,6 @@
 {
   "name": "gitty",
-  "version": "3.3.4",
+  "version": "3.3.5",
   "description": "A Node.js wrapper for the Git CLI",
   "main": "index",
   "dependencies": {},
@@ -95,6 +95,10 @@
     {
       "name": "Jeremy Green",
       "url": "https://github.com/jagthedrummer"
+    },
+    {
+      "name": "Charlie Hardt",
+      "url": "https://github.com/chasdev"
     }
   ],
   "license": "LGPL-3.0"
