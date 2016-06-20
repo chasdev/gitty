@@ -37,6 +37,10 @@
   },
   "contributors": [
     {
+      "name": "Anna Gray",
+      "url": "https://github.com/annagray"
+     },
+    {
       "name": "Christopher Meyering",
       "url": "https://github.com/MeySolution"
     },
