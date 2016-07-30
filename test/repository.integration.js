@@ -678,20 +678,20 @@ describe('Repository', function() {
 
   describe('.stash()', function() {
 
-  beforeEach(function() {
-    fs.writeFileSync(repo1.path + '/File.txt', 'I am a file.');
-  });
-
-  it('should stash the new file and not show it in status', function(done) {
-        repo1.stash([], function () {
-          repo1.status(function(err, status) {
-            should.not.exists(err);
-            (status.untracked.indexOf('File.txt') === 0).should.equal(false);
-            done();   
-          });           
-        });
+    beforeEach(function() {
+      fs.writeFileSync(repo1.path + '/File.txt', 'I am a file.');
     });
-  }); 
+
+    it('should stash the new file and not show it in status', function(done) {
+      repo1.stash([], function () {
+        repo1.status(function(err, status) {
+          should.not.exists(err);
+          (status.untracked.indexOf('File.txt') === 0).should.equal(false);
+          done();
+        });     
+      });
+    });
+  });
 
   describe('.stashSync()', function() {
 
@@ -700,12 +700,12 @@ describe('Repository', function() {
     });
 
     it('should stash the new file and not show it in status', function(done) {
-      repo1.stashSync();      
+      repo1.stashSync();
       repo1.status(function(err, status) {
         should.not.exists(err);
         (status.untracked.indexOf('File.txt') === 0).should.equal(false);
-        done();   
-      });      
+        done();
+      });
     });
-  }); 
+  });
 });
