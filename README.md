@@ -5,7 +5,7 @@
 Gitty is a Node.js wrapper for Git. It's syntax resembles the Git command line
 syntax, executes common commands, and parses the output into operable objects.
 
-**[Complete documentation is available here.](http://gordonwritescode.github.io/gitty)**
+**[Complete documentation is available here.](http://bookch.in/gitty/)**
 
 ## Installation
 
