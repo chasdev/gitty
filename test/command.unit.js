@@ -31,6 +31,20 @@ describe('Command', function() {
       cmd.repo.gitpath.should.equal('/path/to/git');
     });
 
+    it('should set execBuffer based upon the repo object', function() {
+      var largeOps = ['log', 'ls-files', 'status', 'commit'];
+      var defaultBuf = 1024 * 200;
+      var maxBuf = 1024 * 6000;
+      var repo = {
+        largeOperations: largeOps,
+        largeOperationsMaxBuffer: maxBuf
+      };
+      var fetchCmd = new Command(repo, 'fetch');
+      fetchCmd.execBuffer.should.equal(defaultBuf);
+      var commitCmd = new Command(repo, 'status');
+      commitCmd.execBuffer.should.equal(maxBuf);
+    });
+
   });
 
   describe('.exec()', function() {

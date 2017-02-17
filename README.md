@@ -30,7 +30,19 @@ $ npm test
 
 ```js
 var git    = require('gitty');
+
+// identifying the repo and using defaults
 var myRepo = git('/path/to/repo');
+
+// explicitly passing the path to the git client
+var myRepo2 = git('/path/to/repo2', '/not-in-path/bin/git');
+
+// specifying an options object (note all properties are optional)
+var myRepo3 = git('/path/to/repo3', {
+  gitpath: '/not-in-path/bin/git',                          // optional
+  largeOperations: ['log', 'ls-files', 'status', 'commit'], // optional
+  largeOperationsMaxBuffer: 1024 * 6000                     // optional
+});
 ```
 
 Now you can call this instance of `Repository`'s methods. For example, to

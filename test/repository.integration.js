@@ -11,6 +11,7 @@ describe('Repository', function() {
 
   var repo1 = null;
   var repo2 = null;
+  var repo3 = null;
 
   before(function(ready) {
     if (fs.existsSync(HOME + '/.gitty')) {
@@ -20,6 +21,7 @@ describe('Repository', function() {
     fs.mkdirSync(HOME + '/.gitty');
     fs.mkdirSync(HOME + '/.gitty/test1');
     fs.mkdirSync(HOME + '/.gitty/test2');
+    fs.mkdirSync(HOME + '/.gitty/test3');
 
     repo1 = new Repository(HOME + '/.gitty/test1');
     repo2 = new Repository(HOME + '/.gitty/test2');
@@ -38,8 +40,10 @@ describe('Repository', function() {
   });
 
   after(function() {
+    this.timeout(10000);
     rimraf.sync(HOME + '/.gitty/test1');
     rimraf.sync(HOME + '/.gitty/test2');
+    rimraf.sync(HOME + '/.gitty/test3');
   });
 
   describe('.init()', function() {
@@ -688,7 +692,7 @@ describe('Repository', function() {
           should.not.exists(err);
           (status.untracked.indexOf('File.txt') === 0).should.equal(false);
           done();
-        });     
+        });
       });
     });
   });
@@ -708,4 +712,56 @@ describe('Repository', function() {
       });
     });
   });
+
+  describe('support large buffers when using child processes', function() {
+
+    var i;
+    var NUM_FILES = 10000;
+    repo3 = new Repository(HOME + '/.gitty/test3', {
+      largeOperations: ['log', 'ls-files', 'status', 'commit'],
+      largeOperationsMaxBuffer: 1024 * 5000
+    });
+
+    beforeEach(function() {
+      var name;
+      this.timeout(10000);
+      for (i = 0; i < NUM_FILES; i++) {
+        name = '/A_really_long_file_name_for_a_file_with_number-' + i + '.txt';
+        fs.writeFileSync(repo3.path + name, 'I am file' + i + '!');
+      }
+    });
+
+    it('should add, status, & commit a large number of files', function(done) {
+
+      this.timeout(10000);
+
+      repo3.init(function(err) {
+        should.not.exists(err);
+
+        repo3.status(function(err, status) {
+          should.not.exists(err);
+          status.untracked.length.should.equal(NUM_FILES);
+
+          repo3.add([''], ['--all'], function(err) {
+            should.not.exists(err);
+
+            repo3.status(function(err, status2) {
+              should.not.exists(err);
+              status2.untracked.length.should.equal(0);
+              status2.staged.length.should.equal(NUM_FILES);
+              repo3.commit('Initial commit', function(err) {
+                should.not.exists(err);
+                repo3.status(function(err, status3) {
+                  should.not.exists(err);
+                  status3.untracked.length.should.equal(0);
+                  status3.staged.length.should.equal(0);
+                  done();
+                })
+              })
+            })
+          })
+        })
+      })
+    })
+  })
 });
